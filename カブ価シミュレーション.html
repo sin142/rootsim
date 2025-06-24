@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>カブ価シミュレーションゲーム</title>
+    <!-- Tailwind CSSとChart.jsをCDNから読み込み -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        /* フォントの読み込み */
+        @import url('https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;500;700&family=Yusei+Magic&display=swap');
+
+        /* 全体的な世界観・雰囲気の設定 */
+        body {
+            font-family: 'M PLUS Rounded 1c', sans-serif;
+            background-color: #a7d984; /* 明るい草地の背景色 */
+            background-image: url('https://www.transparenttextures.com/patterns/light-grass.png');
+            color: #5c4033; /* 濃い茶色のテキスト */
+        }
+        
+        /* タイトル用の手書き風フォント */
+        .font-title {
+            font-family: 'Yusei Magic', sans-serif;
+        }
+
+        /* 木の板風パネル */
+        .panel-wood {
+            background-color: #d2b48c; /* 木の色 */
+            background-image: url('https://www.transparenttextures.com/patterns/wood-pattern.png');
+            border: 6px solid #8b5a2b; /* 濃い木の枠 */
+            border-radius: 20px;
+            padding: 20px;
+            box-shadow: 0 8px 16px rgba(0,0,0,0.2), inset 0 0 10px rgba(255,255,255,0.3);
+            position: relative;
+        }
+        
+        /* 紙の背景（パネルの内側） */
+        .panel-paper {
+            background-color: #f5f5dc; /* ベージュ（紙の色） */
+            background-image: url('https://www.transparenttextures.com/patterns/paper-fibers.png');
+            border-radius: 12px;
+            padding: 16px;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        /* ぷっくりしたボタン */
+        .game-btn {
+            font-family: 'M PLUS Rounded 1c', sans-serif;
+            font-weight: 700;
+            color: #5c4033;
+            background-color: #fde68a; /* 黄色いパステルカラー */
+            border: 2px solid #ca8a04;
+            border-radius: 9999px; /* 円形に */
+            padding: 10px 16px;
+            box-shadow: 0 4px #d97706;
+            transition: all 0.1s ease-in-out;
+        }
+        .game-btn:hover {
+            background-color: #fef08a;
+        }
+        .game-btn:active {
+            transform: translateY(3px);
+            box-shadow: 0 1px #d97706;
+        }
+        .game-btn:disabled {
+            background-color: #d1d5db;
+            box-shadow: 0 4px #9ca3af;
+            color: #6b7280;
+            cursor: not-allowed;
+            transform: translateY(0);
+        }
+
+        /* セレクトボックスのカスタムスタイル */
+        .custom-select {
+            appearance: none;
+            background-color: #ffffff;
+            border: 2px solid #8b5a2b;
+            border-radius: 8px;
+            padding: 8px 12px;
+            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%238b5a2b' stroke-linecap='round' stroke-linejoin='round' stroke-width='2.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+            background-position: right 0.5rem center;
+            background-repeat: no-repeat;
+            background-size: 1.5em 1.5em;
+            color: #5c4033;
+        }
+        
+        /* 縫い目（ステッチ）風の情報パネル */
+        .stitched-box {
+             background-color: #e0f2fe; /* 淡い水色の布地 */
+             border-radius: 10px;
+             border: 2px dashed #38bdf8; /* 水色の点線 */
+             padding: 12px;
+             text-align: center;
+        }
+    </style>
+</head>
+<body class="p-4 sm:p-6 md:p-8">
+
+    <header class="text-center mb-8">
+        <h1 class="font-title text-4xl sm:text-5xl font-bold text-brown" style="text-shadow: 2px 2px 4px #8b5a2b;">💰 カブ価シミュレーションゲーム</h1>
+        <p class="text-white font-medium mt-2" style="text-shadow: 1px 1px 2px #8b5a2b;">パターンをえらんでシミュレーションをはじめてね！</p>
+    </header>
+
+    <main class="grid grid-cols-1 lg:grid-cols-2 gap-8 max-w-7xl mx-auto">
+
+        <!-- ▼▼▼ 「あ」バージョンのゲームパネル ▼▼▼ -->
+        <div class="panel-wood">
+            <div class="panel-paper">
+                <h2 class="font-title text-2xl font-bold text-cyan-800 mb-4 text-center">バージョン 「あ」</h2>
+                
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+                    <div>
+                        <label for="pattern-select-a" class="block text-sm font-medium mb-1">シミュレーションパターン</label>
+                        <select id="pattern-select-a" class="custom-select w-full"></select>
+                    </div>
+                    <div class="flex items-end space-x-3">
+                        <button id="start-btn-a" class="game-btn w-full">開始</button>
+                        <button id="next-day-btn-a" class="game-btn w-full" disabled>次の日へ</button>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-6">
+                    <div class="stitched-box">
+                        <p class="text-xs">パターン</p>
+                        <p id="pattern-display-a" class="text-lg font-bold">-</p>
+                    </div>
+                    <div class="stitched-box">
+                        <p class="text-xs">ようび</p>
+                        <p id="day-of-week-display-a" class="text-lg font-bold">-</p>
+                    </div>
+                    <div class="stitched-box col-span-2 sm:col-span-1">
+                        <p class="text-xs">いまのカブ価</p>
+                        <p id="price-display-a" class="text-lg font-bold">-</p>
+                    </div>
+                </div>
+
+                <div class="mb-6 overflow-x-auto bg-white/50 rounded-lg p-2">
+                    <table class="w-full text-sm text-center">
+                        <thead class="text-xs">
+                            <tr>
+                                <th class="p-2 font-medium">買値</th>
+                                <th class="p-2 font-medium">月</th>
+                                <th class="p-2 font-medium">火</th>
+                                <th class="p-2 font-medium">水</th>
+                                <th class="p-2 font-medium">木</th>
+                                <th class="p-2 font-medium">金</th>
+                                <th class="p-2 font-medium">土</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr id="weekly-table-a">
+                                <td class="p-2 font-bold">-</td><td class="p-2 font-bold">-</td><td class="p-2 font-bold">-</td><td class="p-2 font-bold">-</td><td class="p-2 font-bold">-</td><td class="p-2 font-bold">-</td><td class="p-2 font-bold">-</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                
+                <div><canvas id="stock-chart-a"></canvas></div>
+            </div>
+        </div>
+
+        <!-- ▼▼▼ 「ん」バージョンのゲームパネル ▼▼▼ -->
+        <div class="panel-wood">
+            <div class="panel-paper">
+                 <h2 class="font-title text-2xl font-bold text-rose-800 mb-4 text-center">バージョン 「ん」</h2>
+            
+                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+                    <div>
+                        <label for="pattern-select-n" class="block text-sm font-medium mb-1">シミュレーションパターン</label>
+                        <select id="pattern-select-n" class="custom-select w-full"></select>
+                    </div>
+                    <div class="flex items-end space-x-3">
+                        <button id="start-btn-n" class="game-btn w-full">開始</button>
+                        <button id="next-day-btn-n" class="game-btn w-full" disabled>次の日へ</button>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-6">
+                    <div class="stitched-box !border-rose-300 !bg-rose-50">
+                        <p class="text-xs">パターン</p>
+                        <p id="pattern-display-n" class="text-lg font-bold">-</p>
+                    </div>
+                     <div class="stitched-box !border-rose-300 !bg-rose-50">
+                        <p class="text-xs">ようび</p>
+                        <p id="day-of-week-display-n" class="text-lg font-bold">-</p>
+                    </div>
+                    <div class="stitched-box !border-rose-300 !bg-rose-50 col-span-2 sm:col-span-1">
+                        <p class="text-xs">いまのカブ価</p>
+                        <p id="price-display-n" class="text-lg font-bold">-</p>
+                    </div>
+                </div>
+
+                <div class="mb-6 overflow-x-auto bg-white/50 rounded-lg p-2">
+                     <table class="w-full text-sm text-center">
+                        <thead class="text-xs">
+                            <tr>
+                                <th class="p-2 font-medium">買値</th><th class="p-2 font-medium">月</th><th class="p-2 font-medium">火</th><th class="p-2 font-medium">水</th><th class="p-2 font-medium">木</th><th class="p-2 font-medium">金</th><th class="p-2 font-medium">土</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr id="weekly-table-n">
+                                <td class="p-2 font-bold">-</td><td class="p-2 font-bold">-</td><td class="p-2 font-bold">-</td><td class="p-2 font-bold">-</td><td class="p-2 font-bold">-</td><td class="p-2 font-bold">-</td><td class="p-2 font-bold">-</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div><canvas id="stock-chart-n"></canvas></div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // ===============================================================
+        // データ定義 (機能は変更なし)
+        // ===============================================================
+        const patternsA = [
+            { name: "は", initialPrice: 100, rates: [1.5, 0.51, 1.42, 1.36, 0.64, 0.28], randomRange: 10 },
+            { name: "な", initialPrice: 100, rates: [1.2, 0.98, 1.5, 0.95, 2.2, 1.94], randomRange: 10 },
+            { name: "え", initialPrice: 100, rates: [1.2, 0.85, 1.15, 0.9, 1.05, 0.95], randomRange: 10 }
+        ];
+        const patternsN = [
+            { name: "は", initialPrice: 100, rates: [0.9, 0.8, 0.7, 1.7, 1.1, 3.0], randomRange: 10 },
+            { name: "な", initialPrice: 100, rates: [1.0, 0.95, 0.90, 0.85, 0.80, 0.75], randomRange: 10 },
+            { name: "え", initialPrice: 100, rates: [3.0, 1.43, 1.11, 0.7, 0.6, 1.5], randomRange: 10 }
+        ];
+        const daysOfWeek = ['日', '月', '火', '水', '木', '金', '土'];
+        const gameState = {
+            a: { isActive: false, currentDayIndex: 0, chartInstance: null },
+            n: { isActive: false, currentDayIndex: 0, chartInstance: null }
+        };
+        const domElements = {
+            a: {
+                select: document.getElementById('pattern-select-a'),
+                startBtn: document.getElementById('start-btn-a'),
+                nextDayBtn: document.getElementById('next-day-btn-a'),
+                patternDisplay: document.getElementById('pattern-display-a'),
+                dayOfWeekDisplay: document.getElementById('day-of-week-display-a'),
+                priceDisplay: document.getElementById('price-display-a'),
+                weeklyTable: document.getElementById('weekly-table-a').cells,
+                chartCanvas: document.getElementById('stock-chart-a'),
+                patterns: patternsA
+            },
+            n: {
+                select: document.getElementById('pattern-select-n'),
+                startBtn: document.getElementById('start-btn-n'),
+                nextDayBtn: document.getElementById('next-day-btn-n'),
+                patternDisplay: document.getElementById('pattern-display-n'),
+                dayOfWeekDisplay: document.getElementById('day-of-week-display-n'),
+                priceDisplay: document.getElementById('price-display-n'),
+                weeklyTable: document.getElementById('weekly-table-n').cells,
+                chartCanvas: document.getElementById('stock-chart-n'),
+                patterns: patternsN
+            }
+        };
+
+        // ===============================================================
+        // 初期化処理 (機能は変更なし)
+        // ===============================================================
+        document.addEventListener('DOMContentLoaded', () => {
+            populateDropdown('a');
+            populateDropdown('n');
+            domElements.a.startBtn.addEventListener('click', () => initializeSimulation('a'));
+            domElements.a.nextDayBtn.addEventListener('click', () => nextDay('a'));
+            domElements.n.startBtn.addEventListener('click', () => initializeSimulation('n'));
+            domElements.n.nextDayBtn.addEventListener('click', () => nextDay('n'));
+        });
+
+        function populateDropdown(version) {
+            const { select, patterns } = domElements[version];
+            patterns.forEach((pattern, index) => {
+                const option = document.createElement('option');
+                option.value = index;
+                option.textContent = pattern.name;
+                select.appendChild(option);
+            });
+        }
+
+        // ===============================================================
+        // ゲーム進行関数 (機能は変更なし、表示の単位を「ベル」に変更)
+        // ===============================================================
+        function initializeSimulation(version) {
+            const state = gameState[version];
+            const dom = domElements[version];
+
+            state.isActive = true;
+            state.currentDayIndex = 1;
+
+            const patternIndex = dom.select.value;
+            const pattern = dom.patterns[patternIndex];
+            const sundayPrice = pattern.initialPrice;
+            const mondayPrice = Math.round(calculateNewPrice(sundayPrice, pattern, 1));
+
+            dom.patternDisplay.textContent = pattern.name;
+            dom.dayOfWeekDisplay.textContent = daysOfWeek[1];
+            dom.priceDisplay.textContent = `${mondayPrice.toLocaleString()}ベル`;
+            
+            Array.from(dom.weeklyTable).forEach(td => td.textContent = '-');
+            dom.weeklyTable[0].textContent = `${sundayPrice.toLocaleString()}ベル`;
+            dom.weeklyTable[1].textContent = `${mondayPrice.toLocaleString()}ベル`;
+            dom.nextDayBtn.disabled = false;
+            
+            if (state.chartInstance) {
+                state.chartInstance.destroy();
+            }
+            createChart(version, pattern.name, [sundayPrice, mondayPrice]);
+        }
+
+        function nextDay(version) {
+            const state = gameState[version];
+            const dom = domElements[version];
+            
+            if (!state.isActive) return;
+            const currentDay = state.currentDayIndex;
+            
+            if (currentDay >= 6) {
+                state.isActive = false;
+                dom.nextDayBtn.disabled = true;
+                alert('今週のシミュレーションはおわりだよ！');
+                return;
+            }
+
+            const nextDayIndex = currentDay + 1;
+            const patternIndex = dom.select.value;
+            const pattern = dom.patterns[patternIndex];
+            const initialPrice = pattern.initialPrice;
+            const newPrice = Math.round(calculateNewPrice(initialPrice, pattern, nextDayIndex));
+
+            dom.dayOfWeekDisplay.textContent = daysOfWeek[nextDayIndex];
+            dom.priceDisplay.textContent = `${newPrice.toLocaleString()}ベル`;
+            dom.weeklyTable[nextDayIndex].textContent = `${newPrice.toLocaleString()}ベル`;
+
+            updateChart(version, newPrice, nextDayIndex);
+
+            state.currentDayIndex = nextDayIndex;
+        }
+
+        // ===============================================================
+        // 補助関数 (機能は変更なし)
+        // ===============================================================
+        function calculateNewPrice(basePrice, pattern, dayIndex) {
+            const rate = pattern.rates[dayIndex - 1];
+            const randomPercent = pattern.randomRange / 100;
+            const randomFactor = 1 + (Math.random() - 0.5) * 2 * randomPercent;
+            const newPrice = basePrice * rate * randomFactor;
+            return Math.max(1, newPrice);
+        }
+
+        // グラフ描画関数（デザインをテーマに合わせる）
+        function createChart(version, patternName, initialData) {
+            const state = gameState[version];
+            const { chartCanvas } = domElements[version];
+            const ctx = chartCanvas.getContext('2d');
+            
+            const labels = ['買値', daysOfWeek[1]];
+            
+            // Chart.jsのデフォルトフォントを設定
+            Chart.defaults.font.family = "'M PLUS Rounded 1c', sans-serif";
+            Chart.defaults.font.size = 12;
+            Chart.defaults.color = '#5c4033';
+            
+            state.chartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: `カブ価のうごき`,
+                        data: initialData,
+                        borderColor: version === 'a' ? '#0891b2' : '#be123c',
+                        backgroundColor: version === 'a' ? 'rgba(6, 182, 212, 0.2)' : 'rgba(244, 63, 94, 0.2)',
+                        fill: true,
+                        tension: 0.3,
+                        pointBackgroundColor: '#fff',
+                        pointBorderColor: version === 'a' ? '#0891b2' : '#be123c',
+                        pointRadius: 5,
+                        pointHoverRadius: 7
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    scales: {
+                        y: { 
+                            beginAtZero: false, 
+                            ticks: { color: '#8b5a2b' }, 
+                            grid: { color: 'rgba(139, 90, 43, 0.2)', borderDash: [2, 3] }
+                        },
+                        x: { 
+                            ticks: { color: '#8b5a2b' }, 
+                            grid: { display: false }
+                        }
+                    },
+                    plugins: { 
+                        legend: { 
+                            position: 'bottom',
+                            labels: {
+                                padding: 20,
+                                font: {
+                                    weight: 'bold'
+                                }
+                             }
+                        } 
+                    }
+                }
+            });
+        }
+
+        function updateChart(version, newPrice, dayIndex) {
+            const state = gameState[version];
+            const chart = state.chartInstance;
+
+            if (chart) {
+                chart.data.labels.push(daysOfWeek[dayIndex]);
+                chart.data.datasets[0].data.push(newPrice);
+                chart.update();
+            }
+        }
+    </script>
+</body>
+</html>
